@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://jehcnp3x1fo4"
-path="res://.godot/imported/Screenshot 2026-09-16 220822.png-1c2460f6197e970c387a31845e1a7036.ctex"
+uid="uid://c8huwfrjj7wdn"
+path="res://.godot/imported/slime basic v2-Sheet.png-63e5699d58410790a92ea168218eac1a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Screenshot 2026-09-16 220822.png"
-dest_files=["res://.godot/imported/Screenshot 2026-09-16 220822.png-1c2460f6197e970c387a31845e1a7036.ctex"]
+source_file="res://Pixel Enemies Free/slime basic v2-Sheet.png"
+dest_files=["res://.godot/imported/slime basic v2-Sheet.png-63e5699d58410790a92ea168218eac1a.ctex"]
 
 [params]
 

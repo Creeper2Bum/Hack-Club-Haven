@@ -2,10 +2,6 @@
 
 [ext_resource type="Texture2D" uid="uid://dv18sm3k2sygb" path="res://Tileset.png" id="1_0xm2m"]
 [ext_resource type="Texture2D" uid="uid://brdutqpeht2bj" path="res://character/character1.png" id="2_0xm2m"]
-[ext_resource type="Texture2D" uid="uid://bph3y2mwnqukp" path="res://icon.svg" id="2_h2yge"]
-[ext_resource type="Texture2D" uid="uid://6pqqfmdjo2a" path="res://character/character14.png" id="2_ryguw"]
-[ext_resource type="Texture2D" uid="uid://d05wnv8f5mcgq" path="res://character/character15.png" id="3_d13ii"]
-[ext_resource type="Texture2D" uid="uid://cnbqmp8uhaam4" path="res://character/character16.png" id="4_1u8w0"]
 [ext_resource type="Texture2D" uid="uid://d7dvta5aa2mf" path="res://character/character2.png" id="4_5vw27"]
 [ext_resource type="Texture2D" uid="uid://dnqigc04d7y4l" path="res://character/character17.png" id="5_0odxb"]
 [ext_resource type="Texture2D" uid="uid://bcnn6poihusil" path="res://character/character3.png" id="5_kek77"]
@@ -14,11 +10,11 @@
 [ext_resource type="Texture2D" uid="uid://bsw7ct6knltv2" path="res://character/character19.png" id="7_a6jrf"]
 [ext_resource type="Texture2D" uid="uid://51fyexb558g7" path="res://character/character20.png" id="8_xuqvo"]
 [ext_resource type="Texture2D" uid="uid://c4cqyucg1fb8l" path="res://character/character21.png" id="9_qsp4k"]
-[ext_resource type="Texture2D" uid="uid://c1auom5216ldu" path="res://character/character13.png" id="10_kq58d"]
 [ext_resource type="Texture2D" uid="uid://csqt164gxuk78" path="res://character/character5.png" id="15_seu75"]
 [ext_resource type="Texture2D" uid="uid://cqwg5b2nm52n2" path="res://character/character6.png" id="16_htxhm"]
 [ext_resource type="Texture2D" uid="uid://c8rg7c7ne448u" path="res://character/character7.png" id="17_jq2sk"]
 [ext_resource type="Texture2D" uid="uid://bpdnrlgwnbd6u" path="res://character/character8.png" id="18_4k2k6"]
+[ext_resource type="Texture2D" uid="uid://buf6sjvvo36ei" path="res://Pixel Enemies Free/rat base outline v2-Sheet.png" id="18_074og"]
 [ext_resource type="Texture2D" uid="uid://dcilx0vg5p6bg" path="res://character/character9.png" id="19_0rl1p"]
 [ext_resource type="Texture2D" uid="uid://c5nynyvpexxay" path="res://character/character10.png" id="20_ok6jj"]
 [ext_resource type="Texture2D" uid="uid://cy1nvoroiukx6" path="res://character/character11.png" id="21_facbu"]
@@ -811,38 +807,43 @@ sources/1 = SubResource("TileSetAtlasSource_1bvp3")
 script/source = "extends CharacterBody2D
 
 @onready var  animation = $\"player image\"
-const SPEED = 300.0
+const SPEED = 200.0
 const JUMP_VELOCITY = -600.0
 var children = [$\"player image\", $\"player hitbox\", $\"player attack range\"]
 var health = 100
-var strength = 10
+var strength = 100
 var attack_cooldown = 0
 var ennemies_in_range
-var direction = true
-
-
+#direction is used for flipping the player if he goes to the left
+var dir_right = true
+# mode is used for keeping track which mode the player was in before attacking
+var mode = \"idle\"
+var last_mode = \"walking\"
+var not_attacking = true
 
 func attack():
 	ennemies_in_range = $\"player attack range\".get_overlapping_bodies()
 	for i in ennemies_in_range:
 		if i.is_in_group(\"ennemies\"):
-			i.take_damage(strength, direction)
-			print(strength)
-		pass
-	pass
+			i.take_damage(strength, dir_right)
+
+	animation.play(\"attack\")
+
+func take_damage(damage, direction):
+	health -= damage
+	velocity[0] += 60 * damage *(1 if direction else -1)
 	
 func abilities(_delta: float):
 	if Input.is_action_just_pressed(\"attack\") and attack_cooldown == 0:
 		attack()
-		attack_cooldown = 1
-		print(\"attacked\")
-		
+		attack_cooldown = 0.6
+
 func abilities_reset(delta: float):
 	if attack_cooldown > delta:
 		attack_cooldown -= delta
 	else:
 		attack_cooldown = 0
-
+		animation.play(mode)
 
 func _physics_process(delta: float) -> void:
 	 #Add the gravity.
@@ -856,26 +857,42 @@ func _physics_process(delta: float) -> void:
 
 	if Input.is_action_pressed(\"left\") and Input.is_action_pressed(\"right\"):
 		velocity.x = 0
+		mode = \"idle\"
+	elif Input.is_action_pressed(\"left\") and Input.is_action_pressed(\"run\"):
+		velocity.x = 2 * -SPEED
+		mode = \"running\"
 	elif Input.is_action_pressed(\"left\"):
 		velocity.x = -SPEED
-		
+		mode = \"walking\"
+	elif Input.is_action_pressed(\"right\") and Input.is_action_pressed(\"run\"):
+		velocity.x = 2 * SPEED
+		mode = \"running\"
 	elif Input.is_action_pressed(\"right\"):
 		velocity.x = SPEED
+		mode = \"walking\"
 	elif is_on_floor():
-		velocity.x *= 0.1**delta
+		velocity.x *= 0.01**delta
 		
-	if Input.is_action_just_pressed(\"left\") and direction:
+	if Input.is_action_just_pressed(\"left\") and dir_right:
 		scale[0] = -1
-		direction = false
-	if Input.is_action_just_pressed(\"right\")and not direction:
+		dir_right = false
+	if Input.is_action_just_pressed(\"right\")and not dir_right:
 		scale[0] = -1
-		direction = true
+		dir_right = true
+
+	if abs(velocity[0]) < 150:
+		mode = \"idle\"
 
 	move_and_slide()
+
+func animate_character():
+	not_attacking = attack_cooldown == 0
+	if not_attacking and not last_mode == mode:
+		animation.play(mode)
+	last_mode = mode
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	animation.play(\"idle\")
-
+	pass
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
 	abilities(delta)
@@ -883,18 +900,12 @@ func _process(delta: float) -> void:
 	
 "
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_qq81q"]
+size = Vector2(52, 90)
+
 [sub_resource type="SpriteFrames" id="SpriteFrames_uuv0r"]
 animations = [{
 "frames": [{
-"duration": 1.0,
-"texture": ExtResource("2_ryguw")
-}, {
-"duration": 1.0,
-"texture": ExtResource("3_d13ii")
-}, {
-"duration": 1.0,
-"texture": ExtResource("4_1u8w0")
-}, {
 "duration": 1.0,
 "texture": ExtResource("5_0odxb")
 }, {
@@ -907,15 +918,12 @@ animations = [{
 "duration": 1.0,
 "texture": ExtResource("8_xuqvo")
 }, {
-"duration": 1.0,
+"duration": 2.0,
 "texture": ExtResource("9_qsp4k")
-}, {
-"duration": 1.0,
-"texture": ExtResource("10_kq58d")
 }],
-"loop": 1,
+"loop": 2,
 "name": &"attack",
-"speed": 5.0
+"speed": 10.0
 }, {
 "frames": [{
 "duration": 1.0,
@@ -958,45 +966,402 @@ animations = [{
 }],
 "loop": 1,
 "name": &"running",
-"speed": 5.0
+"speed": 30.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("15_seu75")
+}, {
+"duration": 1.0,
+"texture": ExtResource("16_htxhm")
+}, {
+"duration": 1.0,
+"texture": ExtResource("17_jq2sk")
+}, {
+"duration": 1.0,
+"texture": ExtResource("18_4k2k6")
+}, {
+"duration": 1.0,
+"texture": ExtResource("19_0rl1p")
+}, {
+"duration": 1.0,
+"texture": ExtResource("20_ok6jj")
+}, {
+"duration": 1.0,
+"texture": ExtResource("21_facbu")
+}],
+"loop": 1,
+"name": &"walking",
+"speed": 15.0
 }]
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_qq81q"]
-size = Vector2(52, 90)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_uuv0r"]
 radius = 52.03845
 
 [sub_resource type="GDScript" id="GDScript_egrb2"]
 script/source = "extends CharacterBody2D
+
+@onready var rat_animation = $\"rat image\"
 var health = 100
+var dir_right = false
+var last_dir_right = true
+var attack_cooldown = 0
+var still_atacking = false
+var mode = \"idle\"
+var mode_last
+var animation_finished = true
+var animation_finished_last = true
+var player_in_range = false
+var attack_now = false
+var attack_now_last = false
+var is_dying = false
+const SPEED = 200
+const accelleration = 400
+const strength = 10
+
 
 
 func take_damage(damage, direction):
 	health -= damage
 	velocity[0] += 20 * damage *(1 if direction else -1)
-	print(health)
 	
 func _physics_process(delta: float) -> void:
 	 #Add the gravity.
 	if not is_on_floor():
 		velocity += get_gravity() * delta
-	if is_on_floor():
-		velocity.x *= 0.2**delta
+	if dir_right != last_dir_right:
+		scale.x = -1
+	last_dir_right = dir_right
 	move_and_slide()
+	
+func go_to_player(delta):
+	if is_on_floor():
+		var pos_rat = self.position.x
+		var pos_player = $\"../player\".position.x
+		if abs(pos_rat-pos_player) > 500:
+			mode = \"idle\"
+			velocity.x = move_toward(velocity.x, 0, accelleration*delta)
+		elif pos_rat < pos_player:
+			dir_right = true
+			mode = \"walking\"
+			velocity.x = move_toward(velocity.x, SPEED, accelleration*delta)
+		elif pos_rat > pos_player:
+			dir_right = false
+			mode = \"walking\"
+			velocity.x = move_toward(velocity.x, -SPEED, accelleration*delta)
+		else:
+			velocity.x = move_toward(velocity.x, 0, accelleration*delta)
+
+func player_in_range_func():
+	player_in_range = false
+	for i in $\"rat attack range\".get_overlapping_bodies():
+		if i.is_in_group(\"player\"):
+			player_in_range = true
+
+func attack():
+	if attack_cooldown < 0 and player_in_range:
+
+		attack_cooldown = 2
+		rat_animation.play(\"attack\")
+		
+func abilities():
+	attack_now = attack_cooldown < 1.65
+	if attack_now and not attack_now_last and player_in_range:
+		$\"../player\".take_damage(strength,dir_right)
+	attack_now_last = attack_now
+	print(health)
+	if health <= 0:
+		dying()
+		
+
+func animation():
+	animation_finished = attack_cooldown < 1.2
+	if animation_finished and not animation_finished_last:
+		rat_animation.play(mode)
+	animation_finished_last = animation_finished
+	if animation_finished and mode_last != mode:
+		rat_animation.play(mode)
+		
+func abilities_reset(delta):
+	attack_cooldown -= delta
+	
+func dying():
+	rat_animation.play(\"dying\")
+	set_physics_process(false)
+	$\"rat hitbox\".disabled = true
+	is_dying = true
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	pass # Replace with function body.
-
-
+	pass # Replace with function body
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
-	pass
+	if not is_dying:
+		go_to_player(delta)
+		attack()
+		abilities()
+		animation()
+		abilities_reset(delta)
+		player_in_range_func()
+	
+
+
+	
+	
 "
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_uuv0r"]
-size = Vector2(42.666653, 96)
+size = Vector2(42.666653, 58)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_facbu"]
+atlas = ExtResource("18_074og")
+region = Rect2(68, 335, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_b1qrp"]
+atlas = ExtResource("18_074og")
+region = Rect2(132, 335, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_come4"]
+atlas = ExtResource("18_074og")
+region = Rect2(196, 335, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_h8e4i"]
+atlas = ExtResource("18_074og")
+region = Rect2(260, 335, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4lmeg"]
+atlas = ExtResource("18_074og")
+region = Rect2(324, 335, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0cp0l"]
+atlas = ExtResource("18_074og")
+region = Rect2(388, 335, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_d2t1y"]
+atlas = ExtResource("18_074og")
+region = Rect2(452, 335, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_gngh3"]
+atlas = ExtResource("18_074og")
+region = Rect2(516, 335, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0n3wm"]
+atlas = ExtResource("18_074og")
+region = Rect2(4, 463, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_qnost"]
+atlas = ExtResource("18_074og")
+region = Rect2(68, 463, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wnkbs"]
+atlas = ExtResource("18_074og")
+region = Rect2(132, 463, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_f6a44"]
+atlas = ExtResource("18_074og")
+region = Rect2(196, 463, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0cbny"]
+atlas = ExtResource("18_074og")
+region = Rect2(260, 463, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_hrvbo"]
+atlas = ExtResource("18_074og")
+region = Rect2(324, 463, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_cegan"]
+atlas = ExtResource("18_074og")
+region = Rect2(4, 15, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_82xsv"]
+atlas = ExtResource("18_074og")
+region = Rect2(68, 15, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_getpj"]
+atlas = ExtResource("18_074og")
+region = Rect2(132, 15, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ryguw"]
+atlas = ExtResource("18_074og")
+region = Rect2(196, 15, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_d13ii"]
+atlas = ExtResource("18_074og")
+region = Rect2(260, 15, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_1u8w0"]
+atlas = ExtResource("18_074og")
+region = Rect2(324, 15, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0odxb"]
+atlas = ExtResource("18_074og")
+region = Rect2(388, 15, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_lswn8"]
+atlas = ExtResource("18_074og")
+region = Rect2(452, 15, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_a6jrf"]
+atlas = ExtResource("18_074og")
+region = Rect2(516, 15, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_xuqvo"]
+atlas = ExtResource("18_074og")
+region = Rect2(580, 15, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_qsp4k"]
+atlas = ExtResource("18_074og")
+region = Rect2(4, 79, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_kq58d"]
+atlas = ExtResource("18_074og")
+region = Rect2(68, 79, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_seu75"]
+atlas = ExtResource("18_074og")
+region = Rect2(132, 79, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_htxhm"]
+atlas = ExtResource("18_074og")
+region = Rect2(196, 79, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_jq2sk"]
+atlas = ExtResource("18_074og")
+region = Rect2(260, 79, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_4k2k6"]
+atlas = ExtResource("18_074og")
+region = Rect2(324, 79, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_0rl1p"]
+atlas = ExtResource("18_074og")
+region = Rect2(388, 79, 48, 32)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ok6jj"]
+atlas = ExtResource("18_074og")
+region = Rect2(452, 79, 48, 32)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_imcyi"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_facbu")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_b1qrp")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_come4")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_h8e4i")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_4lmeg")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_0cp0l")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_d2t1y")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_gngh3")
+}],
+"loop": 2,
+"name": &"attack",
+"speed": 10.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_0n3wm")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_qnost")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_wnkbs")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_f6a44")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_0cbny")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_hrvbo")
+}],
+"loop": 0,
+"name": &"dying",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_cegan")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_82xsv")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_getpj")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ryguw")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_d13ii")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_1u8w0")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_0odxb")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_lswn8")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_a6jrf")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_xuqvo")
+}],
+"loop": 1,
+"name": &"idle",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_qsp4k")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kq58d")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_seu75")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_htxhm")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_jq2sk")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_4k2k6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_0rl1p")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ok6jj")
+}],
+"loop": 1,
+"name": &"walking",
+"speed": 10.0
+}]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_imcyi"]
+radius = 31.016125
 
 [node name="Main" type="Node2D" unique_id=243584356]
 
@@ -1005,40 +1370,49 @@ scale = Vector2(2, 2)
 tile_map_data = PackedByteArray("AAAAABIAAAABAAEAAAAAABMAAAABAAIAAAABABIAAAABAAEAAAABABMAAAABAAIAAAACABIAAAABAAEAAAACABMAAAABAAIAAAADABIAAAABAAEAAAADABMAAAABAAIAAAAEABMAAAABAAIAAAAFABMAAAABAAIAAAAGABMAAAABAAIAAAAHABIAAAABAAEAAAAHABMAAAABAAIAAAAIABIAAAABAAEAAAAIABMAAAABAAIAAAAJABIAAAABAAEAAAAJABMAAAABAAIAAAAKABIAAAABAAEAAAAKABMAAAABAAIAAAALABMAAAABAAIAAAAMABMAAAABAAIAAAANABMAAAABAAIAAAAOABIAAAABAAEAAAAOABMAAAABAAIAAAAPABIAAAABAAEAAAAPABMAAAABAAIAAAAQABIAAAABAAEAAAAQABMAAAABAAIAAAARABIAAAABAAEAAAARABMAAAABAAIAAAASABIAAAABAAEAAAASABMAAAABAAIAAAATABMAAAABAAIAAAAUABIAAAABAAEAAAAUABMAAAABAAIAAAAVABIAAAABAAEAAAAVABMAAAABAAIAAAAWABIAAAABAAEAAAAWABMAAAABAAIAAAAXABMAAAABAAIAAAAYABIAAAABAAEAAAAYABMAAAABAAIAAAAZABIAAAABAAEAAAAZABMAAAABAAIAAAAaABIAAAABAAEAAAAaABMAAAABAAIAAAAbABIAAAABAAEAAAAbABMAAAABAAIAAAAcABIAAAABAAEAAAAcABMAAAABAAIAAAAdABIAAAABAAEAAAAdABMAAAABAAIAAAAeABIAAAABAAEAAAAeABMAAAABAAIAAAAfABIAAAABAAEAAAAfABMAAAABAAIAAAAgABIAAAABAAEAAAAgABMAAAABAAIAAAAhABIAAAABAAEAAAAhABMAAAABAAIAAAAiABIAAAABAAEAAAAiABMAAAABAAIAAAAjABIAAAABAAEAAAAjABMAAAABAAIAAAALABIAAAABAAEAAAANABIAAAABAAEAAAAMABIAAAABAAEAAAATABIAAAABAAEAAAAXABIAAAABAAEAAAAGABIAAAABAAEAAAAFABIAAAABAAEAAAAEABIAAAABAAEAAAA=")
 tile_set = SubResource("TileSet_qq81q")
 
-[node name="Player" type="CharacterBody2D" parent="." unique_id=1295506073]
+[node name="player" type="CharacterBody2D" parent="." unique_id=1295506073 groups=["player"]]
 position = Vector2(374, 75)
 script = SubResource("GDScript_qq81q")
 
-[node name="player image" type="AnimatedSprite2D" parent="Player" unique_id=292480693]
-scale = Vector2(2, 2)
-sprite_frames = SubResource("SpriteFrames_uuv0r")
-animation = &"idle"
-
-[node name="Camera2D" type="Camera2D" parent="Player" unique_id=1382559451]
-position_smoothing_enabled = true
-position_smoothing_speed = 6.0
-
-[node name="player hitbox" type="CollisionShape2D" parent="Player" unique_id=521172800]
+[node name="player hitbox" type="CollisionShape2D" parent="player" unique_id=521172800]
 position = Vector2(-16, 8)
 shape = SubResource("RectangleShape2D_qq81q")
 
-[node name="player attack range" type="Area2D" parent="Player" unique_id=963669072]
-position = Vector2(103, -95)
+[node name="player image" type="AnimatedSprite2D" parent="player" unique_id=292480693]
+scale = Vector2(2, 2)
+sprite_frames = SubResource("SpriteFrames_uuv0r")
+animation = &"attack"
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Player/player attack range" unique_id=1860204315]
-position = Vector2(-95, 73)
+[node name="player attack range" type="Area2D" parent="player" unique_id=963669072]
+position = Vector2(9, -10)
+
+[node name="player attack area" type="CollisionShape2D" parent="player/player attack range" unique_id=1860204315]
+position = Vector2(-1, 10)
 shape = SubResource("CircleShape2D_uuv0r")
 
-[node name="Enemy 1" type="CharacterBody2D" parent="." unique_id=165136584 groups=["ennemies"]]
+[node name="Camera2D" type="Camera2D" parent="player" unique_id=1382559451]
+position_smoothing_enabled = true
+position_smoothing_speed = 6.0
+
+[node name="Rat" type="CharacterBody2D" parent="." unique_id=165136584 groups=["ennemies"]]
 position = Vector2(471, 154)
 script = SubResource("GDScript_egrb2")
 
-[node name="Sprite2D" type="Sprite2D" parent="Enemy 1" unique_id=959085320]
-position = Vector2(3.8146973e-06, 0)
-scale = Vector2(0.5, 0.75)
-texture = ExtResource("2_h2yge")
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Enemy 1" unique_id=1417549707]
-position = Vector2(3.0517578e-05, 0)
+[node name="rat hitbox" type="CollisionShape2D" parent="Rat" unique_id=1417549707]
+position = Vector2(3.0517578e-05, 2)
 scale = Vector2(1.5, 1)
 shape = SubResource("RectangleShape2D_uuv0r")
+
+[node name="rat image" type="AnimatedSprite2D" parent="Rat" unique_id=1895982979]
+scale = Vector2(2, 2)
+sprite_frames = SubResource("SpriteFrames_imcyi")
+animation = &"dying"
+frame = 5
+frame_progress = 1.0
+
+[node name="rat attack range" type="Area2D" parent="Rat" unique_id=1916726133]
+position = Vector2(24, -17)
+
+[node name="rat attack area" type="CollisionShape2D" parent="Rat/rat attack range" unique_id=1064188084]
+position = Vector2(6, 17)
+shape = SubResource("CircleShape2D_imcyi")

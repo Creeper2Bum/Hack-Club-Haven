@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bxfyt1bvetl0t"
-path="res://.godot/imported/Screenshot 2026-09-18 203023.png-a9a9f23fc9c16662e988649b4a6864a0.ctex"
+uid="uid://buf6sjvvo36ei"
+path="res://.godot/imported/rat base outline v2-Sheet.png-ab7dbe217ee1399be202ab49a6ec1d15.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Screenshot 2026-09-18 203023.png"
-dest_files=["res://.godot/imported/Screenshot 2026-09-18 203023.png-a9a9f23fc9c16662e988649b4a6864a0.ctex"]
+source_file="res://Pixel Enemies Free/rat base outline v2-Sheet.png"
+dest_files=["res://.godot/imported/rat base outline v2-Sheet.png-ab7dbe217ee1399be202ab49a6ec1d15.ctex"]
 
 [params]
 
